@@ -1,0 +1,75 @@
+name: Build Pixelorama-MCP bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp-server/**"
+      - ".github/workflows/build-mcp-bundle.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mcp-server
+        run: npm ci
+
+      - name: Build TypeScript
+        working-directory: mcp-server
+        run: npm run build
+
+      - name: Remove development dependencies
+        working-directory: mcp-server
+        run: npm prune --omit=dev
+
+      - name: Create Windows launcher
+        run: |
+          mkdir -p release/Pixelorama-MCP
+          cp -r mcp-server/dist release/Pixelorama-MCP/dist
+          cp -r mcp-server/node_modules release/Pixelorama-MCP/node_modules
+          cp mcp-server/package.json release/Pixelorama-MCP/package.json
+          cat > release/Pixelorama-MCP/start-mcp.cmd <<'EOF'
+          @echo off
+          cd /d "%~dp0"
+          node dist/index.js
+          EOF
+          cat > release/Pixelorama-MCP/README.txt <<'EOF'
+          Pixelorama-MCP prebuilt bundle
+
+          Requirements:
+          - Node.js 18 or newer
+          - Pixelorama with PixMcpBridge.pck enabled
+
+          Start:
+          Double-click start-mcp.cmd
+
+          The MCP server communicates with the Pixelorama bridge at:
+          http://127.0.0.1:7373
+          EOF
+
+      - name: Package bundle
+        run: |
+          cd release
+          zip -r Pixelorama-MCP-Windows.zip Pixelorama-MCP
+
+      - name: Upload prebuilt bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixelorama-MCP-Windows
+          path: release/Pixelorama-MCP-Windows.zip
+          if-no-files-found: error
