@@ -22,12 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: mcp-server/package-lock.json
 
-      - name: Install dependencies
+      - name: Install runtime and build dependencies
         working-directory: mcp-server
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Build TypeScript
         working-directory: mcp-server
@@ -35,7 +33,7 @@ jobs:
 
       - name: Remove development dependencies
         working-directory: mcp-server
-        run: npm prune --omit=dev
+        run: npm prune --omit=dev --legacy-peer-deps
 
       - name: Create Windows launcher
         run: |
@@ -50,16 +48,9 @@ jobs:
           EOF
           cat > release/Pixelorama-MCP/README.txt <<'EOF'
           Pixelorama-MCP prebuilt bundle
-
-          Requirements:
-          - Node.js 18 or newer
-          - Pixelorama with PixMcpBridge.pck enabled
-
-          Start:
-          Double-click start-mcp.cmd
-
-          The MCP server communicates with the Pixelorama bridge at:
-          http://127.0.0.1:7373
+          Requires Node.js 18+ and Pixelorama with PixMcpBridge enabled.
+          Start start-mcp.cmd.
+          Bridge: http://127.0.0.1:7373
           EOF
 
       - name: Package bundle
